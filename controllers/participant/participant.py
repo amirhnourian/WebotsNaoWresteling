@@ -63,6 +63,8 @@ class Eve (Robot):
             'TurnRight': Motion('../motions/TurnRight20.motion'),
             'TurnLeft': Motion('../motions/TurnLeft20.motion'),
             'ForwardLoop': Motion('../motions/ForwardLoop.motion'),
+            'Shoveandforward': Motion('../motions/Shoveandforward.motion'),
+
             
         }
         self.opponent_position = RunningAverage(dimensions=1)
