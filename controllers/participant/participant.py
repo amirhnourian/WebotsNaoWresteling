@@ -63,24 +63,38 @@ class Eve (Robot):
             'TurnRight': Motion('../motions/TurnRight20.motion'),
             'TurnLeft': Motion('../motions/TurnLeft20.motion'),
             'ForwardLoop': Motion('../motions/ForwardLoop.motion'),
-            'Shoveandforward': Motion('../motions/Shoveandforward.motion'),
+            'Shove': Motion('../motions/Shove.motion'),
+            'Forwards': Motion('../motions/Forwards.motion'),
 
             
         }
+        # to play forward motion and shove together
+        forward_indicator = 0 
+
+
         self.opponent_position = RunningAverage(dimensions=1)
         self.dodging_direction = 'left'
         self.counter = 0
 
     def run(self):
         while self.step(self.time_step) != -1:
+ 
             self.opponent_position.update_average(
                 self._get_normalized_opponent_horizontal_position())
             self.fall_detector.check()
             self.fsm.execute_action()
+        
+
+ 
+
+
 
     def choose_action(self):
+        global forward_indicator
         if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
-            self.current_motion.set(self.motions['ForwardLoop'])
+                self.current_motion.set(self.motions['Forwards'])
+                forward_indicator = 1
+
         else:
             if self.opponent_position.average < -0.4:
                 self.current_motion.set(self.motions['TurnLeft'])
@@ -105,9 +119,22 @@ class Eve (Robot):
         self.fsm.transition_to('BLOCKING_MOTION')
 
     def pending(self):
-        # waits for the current motion to finish before doing anything else
-        if self.current_motion.is_over():
-            self.fsm.transition_to('CHOOSE_ACTION')
+        global forward_indicator
+        # waits for the current motion to finish before doing anything else)
+
+        #self.current_motion.set(self.motions['Shove'])
+        #self.fsm.execute_action()            
+        if self.current_motion.is_over() or forward_indicator == 1:
+            if forward_indicator == 1 and self.current_motion.is_over():
+            # if self.current_motion == self.motions['Forwards']:
+                #self.fsm.transition_to('BLOCKING_MOTION')
+                self.current_motion.set(self.motions['Shove'])
+                self.fsm.execute_action()
+                forward_indicator = 0
+            elif self.current_motion.is_over():
+            #else:
+                self.fsm.transition_to('CHOOSE_ACTION')
+
 
     def _get_normalized_opponent_horizontal_position(self):
         """Returns the horizontal position of the opponent in the image, normalized to [-1, 1]
