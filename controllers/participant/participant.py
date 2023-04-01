@@ -29,7 +29,7 @@ from utils.camera import Camera
 class Fatima (Robot):
     SMALLEST_TURNING_RADIUS = 10
     SAFE_ZONE = 0.5
-    TIME_BEFORE_DIRECTION_CHANGE = 100  # 8000 ms / 40 ms
+    TIME_BEFORE_DIRECTION_CHANGE = 200  # 8000 ms / 40 ms
 
     def __init__(self):
         Robot.__init__(self)
@@ -64,7 +64,7 @@ class Fatima (Robot):
         # We set the desired radius such that the robot walks towards the opponent.
         # If the opponent is close to the middle, the robot walks straight.
         # desired_radius = (self.SMALLEST_TURNING_RADIUS / normalized_x) if abs(normalized_x) > 1e-3 else None
-        if self.counter > 2*self.TIME_BEFORE_DIRECTION_CHANGE:
+        if self.counter > 1.2*self.TIME_BEFORE_DIRECTION_CHANGE:
             self.counter = 0
             self.heading_angle = 0
             self.reverse = -1
