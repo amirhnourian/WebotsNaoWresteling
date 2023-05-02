@@ -1,14 +1,12 @@
 FROM cyberbotics/webots.cloud:R2023a-ubuntu20.04-numpy
 
-# Additional dependencies for the utils folder
+# Dependencies for OpenCV
 RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --upgrade pip && \
     pip3 install --no-cache-dir \
-    opencv-python \
-    scipy \
-    ahrs
+    opencv-python
 
 # Environment variables needed for Webots
 # https://cyberbotics.com/doc/guide/running-extern-robot-controllers#remote-extern-controllers

@@ -1,157 +1,156 @@
-<span id="title">
-
-# ICRA 2023 Humanoid Robot Wrestling Competition
-
-</span>
+# Humanoid Robot Wrestling Controller Example
 
 [![webots.cloud - Competition](https://img.shields.io/badge/webots.cloud-Competition-007ACC)][1]
 
-<span id="description">
+## Eve controller
 
-This competition focuses on the development of advanced humanoid robot control software for a wrestling game. It relies on a calibrated simulation model of the NAO robot, running in the Webots simulator with realistic physics, sensor and actuator simulation.
+Demonstrates how to use the camera and gives an image processing example to locate the opponent. A step by step explanation of the whole image processing workflow is provided by a [notebook](./notebook/image_processing_explanation.ipynb).
 
-</span>
+This controller needs OpenCV and Numpy, therefore the [Dockerfile](controllers/Dockerfile#L4-L9) needs to be updated:
 
-Being spectacular and easy to get started with, this competition aims at gathering a large number of competitors, both on-site and remotely. The fully open-source competition software stack was designed to be re-used as a [template](https://github.com/cyberbotics/competition-template) for other simulation-based robot competitions.
-
-![Webots screenshot](preview/thumbnail.jpg "Webots screenshot")
-
-## Competition Information
-
-<span id="information">
-
-- Difficulty: Master or PhD
-- Robot: NAO
-- Programming Language: any
-- Commitment: a few weeks
-- Prize: [1 Ethereum](https://www.google.com/search?q=ethereum+price)
-
-</span>
-
-## Important Dates
-
-| date               | description                                      |
-|--------------------|--------------------------------------------------|
-| January 16th, 2023 | registration opens and qualification games start |
-| May 23rd, 2023     | selection of the best 32 teams                   |
-| **May 30th, 2023** | **1/16 finals**                                  |
-| **May 31th, 2023** | **1/8 finals**                                   |
-| **June 1st, 2023** | **1/4 finals**                                   |
-| **June 2nd, 2023** | **semifinals, third place game and final**       |
-
-The finals will take place at the [ICRA 2023](https://www.icra2023.org) conference in London and will be broadcasted online in real time.
-Remote participation will be possible.
-
-## Prize
-
-The winning team will receive [one Ethereum](https://www.google.com/search?q=ethereum+price) crypto-currency (priced around USD 1'547 on January 16th, 2023).
-
-## Participation Conditions
-
-Anyone can participate: there is absolutely no restriction on the quality and number of team members.
-Participation is free of charge, including the finals.
-
-## Get Started Now
-
-To get started programming your wrestling robot, you will have to:
-
-### 1. Create your own Participant Repository from this Template
-
-[Click here](../../generate) to create your own repository automatically or do it manually by clicking on the green button "Use this template".
-If you get a 404 page it's probably because you are not connected to your GitHub account.
-- Fill the "Repository name" field with a name for your controller.
-- Set the visibility of your repository to "Private" unless you don't care about people looking at your code.
-- Finally, click on the green button "Create repository from template".
-
-You should continue reading this document on your **own** repository page and not this one.
-**This is important** in order to be able to use the links in the following sections.
-Remember that you can open a link in a new tab by middle-clicking the link.
-
-### 2. Add [omichel](https://github.com/omichel) as a Collaborator
-
-You can skip this step if you created your repository as "Public" instead of "Private".
-
-Otherwise, you must grant access to your repository to the competition organizer so that your code can be checked out to evaluate its performance and the organizer can post issues on your repository in case of problems with your code.
-
-- [Click here](../../settings/access) to go to the "Collaborators" setting page. You might need to confirm the access by re-entering your GitHub password.
-- You should see a "Manage access" box where you will see the current collaborators of the repo.
-Click on the "Add people" and search for "[omichel](https://github.com/omichel)".
-When you found the organizer, add him to the repository.
-
-### 3. Modify your Robot Controller
-
-You can now edit your [participant.json](../../edit/main/controllers/participant/participant.json) file to set your name, description and country information and also modify your [main robot controller file](../../edit/main/controllers/participant/participant.py) or create new files in this folder and push the modification to the main branch of your repository.
-A series of automated actions will take place in a few seconds.
-If everything went well, your repository should appear after some time in the [leaderboard][1] of the competition.
-If there was a problem, an [issue](../../issues) will be open automatically on your repository by the organizer.
-You will have to read it, fix what is wrong and push the changes to your main branch to re-run the automated verification.
-
-## Rules
-
-The rules of game are implemented in the [referee supervisor](controllers/referee/referee.py).
-They can be summarized as follow:
-
-A game lasts until one of these two conditions occurs:
-- **Knock-out**: If the altitude (along Z axis) of the center of mass of one robot remains below a given threshold for more than 10 seconds, then the other robot is declared the winner and the game is immediately over. This may happen if a robot falls down and cannot recover quickly or if it falls off the ring.
-- **Time-out**: If no knock-out happened after 3 minutes, the robot having the greater ring *coverage* is declared the winner and the game is over. In the unlikely case of *coverage* equality, the winner is determined randomly. 
-
-The *coverage* reflects how far a robot has moved inside the ring. It is computed over the time frame of a game from its maximum and minimum positions along the X and Y axes, respectively *X_max*, *X_min*, *Y_max* and *Y_min*, using the following formula:
-
-```python
-coverage = X_max + Y_max - X_min - Y_min
+```Dockerfile
+# Dependencies for OpenCV
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --upgrade pip && \
+    pip3 install --no-cache-dir \
+    opencv-python
 ```
 
-### Demo Robot Controllers
+Beats [David](https://github.com/cyberbotics/wrestling-david) by locating and dodging him.
 
-A series of sample demo robot controllers with increasing complexity and performance is provided as examples:
+Here is the [participant.py](./controllers/participant/participant.py) file:
 
-- [Alice](https://github.com/cyberbotics/wrestling-alice) plays a simple motion file.
-- [Bob](https://github.com/cyberbotics/wrestling-bob) loads several motion files.
-- [Charlie](https://github.com/cyberbotics/wrestling-charlie) plays a custom motion file and uses the LEDs.
-- [David](https://github.com/cyberbotics/wrestling-david) is able to detect when he falls down and to recover.
-- [Eve](https://github.com/cyberbotics/wrestling-eve) processes camera images to detect her opponent and targets him.
-- [Fatima](https://github.com/cyberbotics/wrestling-fatima) uses an advanced gait manager with inverse kinematics.
+``` Python
+import sys
+sys.path.append('..')
+from utils.camera import Camera
+from utils.fall_detection import FallDetection  # David's fall detection is implemented in this class
+from utils.running_average import RunningAverage
+from utils.image_processing import ImageProcessing as IP
+from utils.finite_state_machine import FiniteStateMachine
+from utils.current_motion_manager import CurrentMotionManager
+from controller import Robot, Motion
+import cv2
 
-### Recommendation to Competitors
 
-The earlier you start working on the competition, the better.
-The ranking algorithm allows a very good robot controller to climp-up to the top of the leaderboard in one day.
-However, in practice, it is recommended to enter the leaderboard rankings as early as possible.
-This allows you to compare your robot controller to others and have time to improve its performance.
+class Eve (Robot):
+    NUMBER_OF_DODGE_STEPS = 10
 
-### Include Dependencies in your Docker Container
+    def __init__(self):
+        Robot.__init__(self)
 
-Your controller is run in a [Docker container](https://www.docker.com/resources/what-container/). If your robot controller has dependencies, such as some specific libraries, python modules, a Java programming interface or a complete ROS framework, be sure to update the [controllers/Dockerfile](controllers/Dockerfile) to include all these dependencies. The default Dockerfile includes the tools needed to run and compile simple C, C++ and Python controllers.
+        # retrieves the WorldInfo.basicTimeTime (ms) from the world file
+        self.time_step = int(self.getBasicTimeStep())
 
-### Ranking System
+        self.fsm = FiniteStateMachine(
+            states=['CHOOSE_ACTION', 'BLOCKING_MOTION'],
+            initial_state='CHOOSE_ACTION',
+            actions={
+                'CHOOSE_ACTION': self.choose_action,
+                'BLOCKING_MOTION': self.pending
+            }
+        )
 
-Each time you push a commit on your main branch, a series of games is started on the runner machine.
-If you are ranked number 1, no game will take place.
-Otherwise, you will first play a game against the competitor ranked just above you in the leaderboard.
-If you loose, nothing will be changed in the leaderboard ranking and no further game will be played.
-Otherwise, you will swap your position in the leaderboard with the competitor just above you and you will play another game with the competitor just above your new position.
-This will be repeated as long as you win until you reach the first rank of the leaderboard.
+        self.camera = Camera(self)
 
-### Checking the Log File of an Evaluation Run
+        # arm motors for getting up from a side fall
+        self.RShoulderRoll = self.getDevice("RShoulderRoll")
+        self.LShoulderRoll = self.getDevice("LShoulderRoll")
 
-When there is a problem with your repository, an issue is opened automatically on your repository to invite you to check the log of the evaluation run.
-However, if your controller crashes for some reason, no error is reported to you, but the animation of your robot will show your robot not moving at all (and your robot will likely loose the game).
-It that case, you should check the log file of the evaluation run to understand why your controller crashed.
-All the log files are available on https://github.com/cyberbotics/wrestling/actions
+        self.fall_detector = FallDetection(self.time_step, self)
+        self.current_motion = CurrentMotionManager()
+        # load motion files
+        self.motions = {
+            'SideStepLeft': Motion('../motions/SideStepLeftLoop.motion'),
+            'SideStepRight': Motion('../motions/SideStepRightLoop.motion'),
+            'TurnRight': Motion('../motions/TurnRight20.motion'),
+            'TurnLeft': Motion('../motions/TurnLeft20.motion'),
+        }
+        self.opponent_position = RunningAverage(dimensions=1)
+        self.dodging_direction = 'left'
+        self.counter = 0
 
-### Runner Machine Configuration
+    def run(self):
+        while self.step(self.time_step) != -1:
+            self.opponent_position.update_average(
+                self._get_normalized_opponent_horizontal_position())
+            self.fall_detector.check()
+            self.fsm.execute_action()
 
-The runner machine will host a single game at a time.
-It will run 3 docker containers:
+    def choose_action(self):
+        if self.opponent_position.average < -0.4:
+            self.current_motion.set(self.motions['TurnLeft'])
+        elif self.opponent_position.average > 0.4:
+            self.current_motion.set(self.motions['TurnRight'])
+        else:
+            # dodging by alternating between left and right side steps to avoid easily falling off the ring
+            if self.dodging_direction == 'left':
+                if self.counter < self.NUMBER_OF_DODGE_STEPS:
+                    self.current_motion.set(self.motions['SideStepLeft'])
+                    self.counter += 1
+                else:
+                    self.dodging_direction = 'right'
+            elif self.dodging_direction == 'right':
+                if self.counter > 0:
+                    self.current_motion.set(self.motions['SideStepRight'])
+                    self.counter -= 1
+                else:
+                    self.dodging_direction = 'left'
+            else:
+                return
+        self.fsm.transition_to('BLOCKING_MOTION')
 
-1. One with Webots and the wrestling supervisor.
-2. One with the controller of the red player (participant).
-3. One with the controller of the blue player (opponent).
+    def pending(self):
+        # waits for the current motion to finish before doing anything else
+        if self.current_motion.is_over():
+            self.fsm.transition_to('CHOOSE_ACTION')
 
-Each docker container running a player controller will be allocated 3 virtual CPU cores, 6 GB of RAM and shared access to the GPU hardware. 
-The runner machine configuration is the following:
-- CPU: [Intel core i7-6700K @ 4.00 Ghz](https://www.cpubenchmark.net/cpu.php?id=2565).
-- RAM: 16 GB.
-- GPU: [NVIDIA GeForce GTX 1060 3 GB](https://www.videocardbenchmark.net/gpu.php?id=3566).
+    def _get_normalized_opponent_horizontal_position(self):
+        """Returns the horizontal position of the opponent in the image, normalized to [-1, 1]
+            and sends an annotated image to the robot window."""
+        img = self.camera.get_image()
+        largest_contour, vertical, horizontal = self.locate_opponent(img)
+        output = img.copy()
+        if largest_contour is not None:
+            cv2.drawContours(output, [largest_contour], 0, (255, 255, 0), 1)
+            output = cv2.circle(output, (horizontal, vertical), radius=2,
+                                color=(0, 0, 255), thickness=-1)
+        self.camera.send_to_robot_window(output)
+        if horizontal is None:
+            return 0
+        return horizontal * 2 / img.shape[1] - 1
 
-[1]: https://webots.cloud/run?version=R2023a&url=https%3A%2F%2Fgithub.com%2Fcyberbotics%2Fwrestling%2Fblob%2Fmain%2Fworlds%2Fwrestling.wbt&type=competition "Leaderboard"
+    def locate_opponent(self, img):
+        """Image processing demonstration to locate the opponent robot in an image."""
+        # we suppose the robot to be located at a concentration of multiple color changes (big Laplacian values)
+        laplacian = cv2.Laplacian(img, cv2.CV_8U, ksize=3)
+        # those spikes are then smoothed out using a Gaussian blur to get blurry blobs
+        blur = cv2.GaussianBlur(laplacian, (0, 0), 2)
+        # we apply a threshold to get a binary image of potential robot locations
+        gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)
+        # the binary image is then dilated to merge small groups of blobs together
+        closing = cv2.morphologyEx(
+            thresh, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15)))
+        # the robot is assumed to be the largest contour
+        largest_contour = IP.get_largest_contour(closing)
+        if largest_contour is not None:
+            # we get its centroid for an approximate opponent location
+            vertical_coordinate, horizontal_coordinate = IP.get_contour_centroid(
+                largest_contour)
+            return largest_contour, vertical_coordinate, horizontal_coordinate
+        else:
+            # if no contour is found, we return None
+            return None, None, None
+
+
+# create the Robot instance and run main loop
+wrestler = Eve()
+wrestler.run()
+```
+
+[Fatima](https://github.com/cyberbotics/wrestling-fatima) is a more advanced robot controller able to win against Eve.
+
+[1]: https://webots.cloud/run?version=R2022b&url=https%3A%2F%2Fgithub.com%2Fcyberbotics%2Fwrestling%2Fblob%2Fmain%2Fworlds%2Fwrestling.wbt&type=competition "Leaderboard"
