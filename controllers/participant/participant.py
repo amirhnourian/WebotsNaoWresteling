@@ -13,29 +13,41 @@
 # limitations under the License.
 
 """
-Demonstrates how to use the camera and gives an image processing example to locate the opponent.
+Demonstrates the gait manager (inverse kinematics + simple ellipsoid path).
 """
-
+from controller import Robot, Motion
 import sys
 sys.path.append('..')
-from utils.camera import Camera
-from utils.camera_bottom import CameraBottom
-from utils.fall_detection import FallDetection  # David's fall detection is implemented in this class
 from utils.running_average import RunningAverage
-from utils.image_processing import ImageProcessing as IP
 from utils.finite_state_machine import FiniteStateMachine
 from utils.current_motion_manager import CurrentMotionManager
-from utils.border_detection import BorderDetection
-from controller import Robot, Motion
 import cv2
-from PIL import Image
+from utils.camera import Camera
+from utils.gait_manager import GaitManager
+from utils.fall_detection import FallDetection
+from utils.image_processing import ImageProcessing as IP
 
-class Eve (Robot):
-    NUMBER_OF_DODGE_STEPS = 10
+# Eve's locate_opponent() is implemented in this module:
+# Eve dependencies
+print('libraries imported')
+
+
+class Fatima (Robot):
+    SMALLEST_TURNING_RADIUS = 10
+    SAFE_ZONE = 0.5
+    TIME_BEFORE_DIRECTION_CHANGE = 200  # 8000 ms / 40 ms
 
     def __init__(self):
         Robot.__init__(self)
+        self.time_step = int(self.getBasicTimeStep())
 
+        self.camera = Camera(self)
+        self.fall_detector = FallDetection(self.time_step, self)
+        self.gait_manager = GaitManager(self, self.time_step)
+        self.heading_angle = 0
+        # Time before changing direction to stop the robot from falling off the ring
+        self.counter = 0
+        # Eve code implementation
         # retrieves the WorldInfo.basicTimeTime (ms) from the world file
         self.time_step = int(self.getBasicTimeStep())
 
@@ -47,14 +59,11 @@ class Eve (Robot):
                 'BLOCKING_MOTION': self.pending
             }
         )
-        self.camera = Camera(self)
-
 
         # arm motors for getting up from a side fall
         self.RShoulderRoll = self.getDevice("RShoulderRoll")
         self.LShoulderRoll = self.getDevice("LShoulderRoll")
 
-        self.fall_detector = FallDetection(self.time_step, self)
         self.current_motion = CurrentMotionManager()
         # load motion files
         self.motions = {
@@ -62,35 +71,108 @@ class Eve (Robot):
             'SideStepRight': Motion('../motions/SideStepRightLoop.motion'),
             'TurnRight': Motion('../motions/TurnRight20.motion'),
             'TurnLeft': Motion('../motions/TurnLeft20.motion'),
-            'Forwards': Motion('../motions/Forwards.motion'),
-            'Shove': Motion('../motions/Shove.motion'),
+            'Shove': Motion('../motions/Shove.motion'),   
         }
         self.opponent_position = RunningAverage(dimensions=1)
         self.dodging_direction = 'left'
         self.counter = 0
-
-        # init for line detection
-        self.border_detector = BorderDetection(self.time_step,self)
-        self.camera_bottom = CameraBottom(self)
-
-        # adjusting head position
-        # HeadPitch
-        self.HeadPitch = self.getDevice("HeadPitch")
-        self.HeadPitch.setPosition(0.25)
+        print('Depemdencies Done')
 
     def run(self):
         while self.step(self.time_step) != -1:
-            self.opponent_position.update_average(
-                self._get_normalized_opponent_horizontal_position())
-            self.fall_detector.check()
-            self.border()
-            self.fsm.execute_action()
+            # We need to update the internal theta value of the gait manager at every step:
+            t = self.getTime()
+            print('time done')
+            self.gait_manager.update_theta()
+            print('self gait manager init done')
+            if 0.3 < t < 2:
+                self.start_sequence()
+                print('start sequence done')
+            elif t > 2:
+                self.fall_detector.check()
+                print('fall check done')
+                self.walk()
+                print('walk done')
+
+    def start_sequence(self):
+        """At the beginning of the match, the robot walks forwards to move away from the edges."""
+        self.gait_manager.command_to_motors(heading_angle=0)
+
+    def walk(self):
+        """Walk towards the opponent like a homing missile."""
+        self.current_motion = None
+        normalized_x = self._get_normalized_opponent_x()
+        self.reverse = 1
+        self.motions['Shove'].play()
+        # We set the desired radius such that the robot walks towards the opponent.
+        # If the opponent is close to the middle, the robot walks straight.
+        # desired_radius = (self.SMALLEST_TURNING_RADIUS / normalized_x) if abs(normalized_x) > 1e-3 else None
+        if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
+            self.heading_angle = 0
+            if abs(normalized_x) > 1e-3:
+                desired_radius = (self.SMALLEST_TURNING_RADIUS / normalized_x)
+            else:
+                desired_radius = None
+            self.gait_manager.command_to_motors(desired_radius=desired_radius, heading_angle=self.heading_angle)
+
+        elif self.opponent_position.average < -0.4:
+            self.current_motion = self.motions['TurnLeft']
+            if self.current_motion is None or self.currentMotion.isOver():
+                self.current_motion.play()        
+
+        elif self.opponent_position.average > 0.4:
+            self.heading_angle = 3.14
+#           self.current_motion.set(self.motions['TurnRight'])
+            if abs(normalized_x) > 1e-3:
+                desired_radius = (self.SMALLEST_TURNING_RADIUS / normalized_x)
+            else:
+                desired_radius = None
+        else:
+            desired_radius = None
+            self.heading_angle = None
+
+#        if self.counter > 1.2*self.TIME_BEFORE_DIRECTION_CHANGE:
+#            self.counter = 0
+#            self.heading_angle = 0
+#            self.reverse = -1
+#            if abs(normalized_x) > 1e-3:
+#                desired_radius = (self.SMALLEST_TURNING_RADIUS / normalized_x)
+#                print(self.counter)
+#            else:
+#                desired_radius = None
+#
+#        elif self.counter > self.TIME_BEFORE_DIRECTION_CHANGE:
+#            print(self.counter)
+#            self.heading_angle = self.reverse*3.14/2
+#            if abs(normalized_x) > 1e-3:
+#                desired_radius = (self.SMALLEST_TURNING_RADIUS / normalized_x)
+#            else:
+#                desired_radius = None
+#        elif abs(normalized_x) > 1e-3:
+#            desired_radius = (self.SMALLEST_TURNING_RADIUS / normalized_x)
+#            print(self.counter)
+#        else:
+#            desired_radius = None
+
+        # TODO: position estimation so that if the robot is close to the edge, it switches dodging direction
+        # if self.counter > self.TIME_BEFORE_DIRECTION_CHANGE:
+        #     self.heading_angle = - self.heading_angle
+        #     self.counter = 0
+#        self.counter += 1
+#        self.gait_manager.command_to_motors(
+#            desired_radius=desired_radius, heading_angle=self.heading_angle)
+
+    def _get_normalized_opponent_x(self):
+        """Locate the opponent in the image and return its horizontal position in the range [-1, 1]."""
+        img = self.camera.get_image()
+        _, _, horizontal_coordinate = IP.locate_opponent(img)
+        if horizontal_coordinate is None:
+            return 0
+        return horizontal_coordinate * 2 / img.shape[1] - 1
+    # All functions from Eve
 
     def choose_action(self):
-        self.motions['Shove'].play()
-        if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
-            self.current_motion.set(self.motions['Forwards'])
-        elif self.opponent_position.average < -0.4:
+        if self.opponent_position.average < -0.4:
             self.current_motion.set(self.motions['TurnLeft'])
         elif self.opponent_position.average > 0.4:
             self.current_motion.set(self.motions['TurnRight'])
@@ -154,15 +236,8 @@ class Eve (Robot):
         else:
             # if no contour is found, we return None
             return None, None, None
-    def border(self):
-        imgB = self.camera_bottom.get_image()
-        output = imgB.copy()
-        imgA = Image.fromarray(output)
-        print('border function initiated')       
-        self.border_detector.avoid_line(output)
-
 
 
 # create the Robot instance and run main loop
-wrestler = Eve()
+wrestler = Fatima()
 wrestler.run()
