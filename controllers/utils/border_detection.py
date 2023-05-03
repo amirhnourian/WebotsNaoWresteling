@@ -29,7 +29,6 @@ import cv2
 import base64
 from utils.camera_bottom import CameraBottom
 import math
-import PIL.Image
 from utils.motion_library import MotionLibrary
 
 

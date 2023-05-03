@@ -28,7 +28,6 @@ from utils.current_motion_manager import CurrentMotionManager
 from utils.border_detection import BorderDetection
 from controller import Robot, Motion
 import cv2
-from PIL import Image
 
 class Eve (Robot):
     NUMBER_OF_DODGE_STEPS = 10
@@ -157,7 +156,6 @@ class Eve (Robot):
     def border(self):
         imgB = self.camera_bottom.get_image()
         output = imgB.copy()
-        imgA = Image.fromarray(output)
         #print('border function initiated')       
         self.border_detector.avoid_line(output)
 
