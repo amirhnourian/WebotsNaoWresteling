@@ -61,7 +61,7 @@ class Eve (Robot):
             'SideStepRight': Motion('../motions/SideStepRightLoop.motion'),
             'TurnRight': Motion('../motions/TurnRight20.motion'),
             'TurnLeft': Motion('../motions/TurnLeft20.motion'),
-            'Forwards': Motion('../motions/Forwards.motion'),
+            'Forwards50': Motion('../motions/ForwardLoop.motion'),
             'Shove': Motion('../motions/Shove.motion'),
         }
         self.opponent_position = RunningAverage(dimensions=1)
@@ -87,9 +87,9 @@ class Eve (Robot):
 
     def choose_action(self):
         self.motions['Shove'].play()
-        if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
-            self.current_motion.set(self.motions['Forwards'])
-        elif self.opponent_position.average < -0.4:
+        #if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
+        #    self.current_motion.set(self.motions['Forwards50'])
+        if self.opponent_position.average < -0.4:
             self.current_motion.set(self.motions['TurnLeft'])
         elif self.opponent_position.average > 0.4:
             self.current_motion.set(self.motions['TurnRight'])
