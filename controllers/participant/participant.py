@@ -158,7 +158,7 @@ class Eve (Robot):
         imgB = self.camera_bottom.get_image()
         output = imgB.copy()
         imgA = Image.fromarray(output)
-        print('border function initiated')       
+        #print('border function initiated')       
         self.border_detector.avoid_line(output)
 
 

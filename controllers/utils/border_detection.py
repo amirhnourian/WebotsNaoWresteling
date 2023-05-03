@@ -81,9 +81,9 @@ class BorderDetection:
             
     def avoid_line(self,img):
         self.img = img
-        print('image imported')
+        #print('image imported')
         if self.line_detection():
-            print('self_line_detection')
+            #print('self_line_detection')
 
             self.fsm.execute_action()
             while self.fsm.current_state != 'NO_LINE':
