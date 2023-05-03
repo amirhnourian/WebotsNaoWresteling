@@ -32,7 +32,6 @@ import math
 from utils.motion_library import MotionLibrary
 
 
-import matplotlib.pyplot as plt
 
 class BorderDetection:
     def __init__(self, time_step, robot):
@@ -194,20 +193,6 @@ class BorderDetection:
             self.fsm.transition_to('SIDE_FALL')
             fall = True
         return fall
-
-# just to see pictures
-
-
-    def plot_in_range(self, image, scale=False):
-        if scale:
-            minValue = np.amin(image)
-            maxValue = np.amax(image)
-            plt.imshow((image-minValue)/(maxValue-minValue))
-        else:
-            plt.imshow(image)
-        plt.show()
-
-
 
 
     def pending(self):
