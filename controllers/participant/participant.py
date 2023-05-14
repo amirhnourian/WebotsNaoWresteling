@@ -28,6 +28,7 @@ from utils.current_motion_manager import CurrentMotionManager
 from utils.border_detection import BorderDetection
 from controller import Robot, Motion
 import cv2
+from math import pi, sin
 
 class Eve (Robot):
     NUMBER_OF_DODGE_STEPS = 10
