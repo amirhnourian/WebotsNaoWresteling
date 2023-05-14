@@ -78,8 +78,9 @@ class Eve (Robot):
         self.HeadPitch = self.getDevice("HeadPitch")
         self.HeadPitch.setPosition(0.25)
     
-    ts = 0 
     def run(self):
+        ts = 0 
+        
         while self.step(self.time_step) != -1:
             ts = (ts + self.time_step)
             t = ts/1000
