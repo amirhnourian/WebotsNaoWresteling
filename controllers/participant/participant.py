@@ -96,8 +96,10 @@ class Eve (Robot):
 
     def choose_action(self):
         self.motions['Shove'].play()
-        if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
-            self.current_motion.set(self.motions['Forwards'])
+        #if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
+            #self.current_motion.set(self.motions['Forwards50'])
+        if -0.4 < self.opponent_position.average < -0.4:
+            self.current_motion.set(self.motions['Forwards50'])
         if self.opponent_position.average < -0.4:
             self.current_motion.set(self.motions['TurnLeft'])
         elif self.opponent_position.average > 0.4:
