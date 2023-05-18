@@ -81,7 +81,7 @@ class Eve (Robot):
     
     def run(self):
         ts = 0 
-        F = 3
+        
         while self.step(self.time_step) != -1:
             ts = (ts + self.time_step)
             t = ts/1000
