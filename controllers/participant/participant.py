@@ -37,8 +37,7 @@ class Eve (Robot):
 
         # retrieves the WorldInfo.basicTimeTime (ms) from the world file
         self.time_step = int(self.getBasicTimeStep())
-        self.leds = {'right': self.getDevice("Ears/Led/Right"),'left':  self.getDevice("Ears/Led/Left")}
-        
+
         self.fsm = FiniteStateMachine(
             states=['CHOOSE_ACTION', 'BLOCKING_MOTION'],
             initial_state='CHOOSE_ACTION',
@@ -77,16 +76,9 @@ class Eve (Robot):
         # HeadPitch
         self.HeadPitch = self.getDevice("HeadPitch")
         self.HeadPitch.setPosition(0.25)
-    
-    ts = 0 
+
     def run(self):
         while self.step(self.time_step) != -1:
-            ts = (ts + self.time_step)
-            t = ts/1000
-            if t > 2.0:
-                self.leds['right'].set(0xff0000)
-                self.leds['left'].set(0xff0000)
-                
             self.opponent_position.update_average(
                 self._get_normalized_opponent_horizontal_position())
             self.fall_detector.check()
