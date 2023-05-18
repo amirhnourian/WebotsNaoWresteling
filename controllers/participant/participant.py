@@ -37,7 +37,8 @@ class Eve (Robot):
 
         # retrieves the WorldInfo.basicTimeTime (ms) from the world file
         self.time_step = int(self.getBasicTimeStep())
-
+        self.leds = {'right': self.getDevice("Ears/Led/Right"),'left':  self.getDevice("Ears/Led/Left")}
+        
         self.fsm = FiniteStateMachine(
             states=['CHOOSE_ACTION', 'BLOCKING_MOTION'],
             initial_state='CHOOSE_ACTION',
@@ -63,6 +64,7 @@ class Eve (Robot):
             'TurnLeft': Motion('../motions/TurnLeft20.motion'),
             'Forwards50': Motion('../motions/ForwardLoop.motion'),
             'Shove': Motion('../motions/Shove.motion'),
+            'Attack': self.attack()
         }
         self.opponent_position = RunningAverage(dimensions=1)
         self.dodging_direction = 'left'
@@ -76,20 +78,27 @@ class Eve (Robot):
         # HeadPitch
         self.HeadPitch = self.getDevice("HeadPitch")
         self.HeadPitch.setPosition(0.25)
-
+        
     def run(self):
+        ts = 0 
         while self.step(self.time_step) != -1:
+            ts = (ts + self.time_step)
+            t = ts/1000
+            if t > 2.0:
+                self.leds['right'].set(0xff0000)
+                self.leds['left'].set(0xff0000)
+                
             self.opponent_position.update_average(
                 self._get_normalized_opponent_horizontal_position())
             self.fall_detector.check()
             self.border()
             self.fsm.execute_action()
-
+                
     def choose_action(self):
         self.motions['Shove'].play()
         #if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
-        #    self.current_motion.set(self.motions['Forwards50'])
-        if self.opponent_position.average < -0.4:
+        #   self.current_motion.set(self.motions['Forwards50'])
+        elif self.opponent_position.average < -0.4:
             self.current_motion.set(self.motions['TurnLeft'])
         elif self.opponent_position.average > 0.4:
             self.current_motion.set(self.motions['TurnRight'])
@@ -158,8 +167,6 @@ class Eve (Robot):
         output = imgB.copy()
         #print('border function initiated')       
         self.border_detector.avoid_line(output)
-
-
 
 # create the Robot instance and run main loop
 wrestler = Eve()
