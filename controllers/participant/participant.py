@@ -28,7 +28,6 @@ from utils.current_motion_manager import CurrentMotionManager
 from utils.border_detection import BorderDetection
 from controller import Robot, Motion
 import cv2
-from math import pi, sin
 
 class Eve (Robot):
     NUMBER_OF_DODGE_STEPS = 10
@@ -65,7 +64,6 @@ class Eve (Robot):
             'TurnLeft': Motion('../motions/TurnLeft20.motion'),
             'Forwards50': Motion('../motions/ForwardLoop.motion'),
             'Shove': Motion('../motions/Shove.motion'),
-            'Attack': self.attack()
         }
         self.opponent_position = RunningAverage(dimensions=1)
         self.dodging_direction = 'left'
@@ -79,15 +77,10 @@ class Eve (Robot):
         # HeadPitch
         self.HeadPitch = self.getDevice("HeadPitch")
         self.HeadPitch.setPosition(0.25)
-        
-        self.Sonar1 = self.getDevice("Sonar/Left")
-        self.Sonar2 = self.getDevice("Sonar/Right")
-        self.Sonar1.enable(self.time_step)
-        self.Sonar2.enable(self.time_step)
-        
+    
     def run(self):
         ts = 0 
-        F = 3
+
         while self.step(self.time_step) != -1:
             ts = (ts + self.time_step)
             t = ts/1000
@@ -100,16 +93,10 @@ class Eve (Robot):
             self.fall_detector.check()
             self.border()
             self.fsm.execute_action()
-            d1 = self.Sonar1.getValue()
-            d2 = self.Sonar2.getValue(
-            position = sin(t * 2.0 * pi * F)
-            
-            if min(d1,d2) < 0.3:
-                self.RShoulderRoll.setPosition(-position)
-                self.LShoulderRoll.setPosition(position) 
-                
+
     def choose_action(self):
         self.motions['Shove'].play()
+        #self.motions['Forwards50'].play()
         if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
             self.current_motion.set(self.motions['Forwards50'])
         elif self.opponent_position.average < -0.4:
@@ -181,9 +168,7 @@ class Eve (Robot):
         output = imgB.copy()
         #print('border function initiated')       
         self.border_detector.avoid_line(output)
-    
-    def attack(self):
-        ts
+
 
 
 # create the Robot instance and run main loop
