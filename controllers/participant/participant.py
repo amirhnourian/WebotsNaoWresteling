@@ -84,9 +84,6 @@ class Eve (Robot):
         while self.step(self.time_step) != -1:
             ts = (ts + self.time_step)
             t = ts/1000
-            position = sin(t * 2.0 * pi * F)
-            self.RShoulderPitch.setPosition(-position)
-            self.LShoulderPitch.setPosition(position)
             if t > 2.0:
                 self.leds['right'].set(0xff0000)
                 self.leds['left'].set(0xff0000)
@@ -101,6 +98,8 @@ class Eve (Robot):
         self.motions['Shove'].play()
         #if self.opponent_position.average > -0.4 and self.opponent_position.average < 0.4:
             #self.current_motion.set(self.motions['Forwards50'])
+        if -0.4 <= self.opponent_position.average <= 0.4:
+            self.current_motion.set(self.motions['Forwards50'])
         if self.opponent_position.average < -0.4:
             self.current_motion.set(self.motions['TurnLeft'])
         elif self.opponent_position.average > 0.4:
