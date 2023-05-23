@@ -106,7 +106,7 @@ class BorderDetection:
 
 
 
-    def line_detection(self, ya_max = 100, yb_max = 100):
+    def line_detection(self, ya_max = 30, yb_max = 30):
 
         image = self.img
 
